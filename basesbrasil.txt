@@ -1,0 +1,236 @@
+
+
+library(spdep)
+library(sp)  # classes for spatial data
+library(raster)  # grids, rasters
+library(rasterVis)  # raster visualisation
+library(maptools)
+library(rgeos)
+library(dismo)
+library(rgdal)
+library(INLA)
+library(xts)
+library(spatstat)
+library(ggplot2)
+
+library(ggmap)
+
+
+#point 
+
+shape=readOGR("/users/laurini/Dropbox/cursoespacial/BASESCEM/LANRES_85_13_RMSP_CEM.shp", layer="LANRES_85_13_RMSP_CEM") #will load the shapefile to your dataset.
+shape=shape[shape$MUNICIPIO=='SAO PAULO',]
+plot(shape)
+
+
+#poligono
+distritos=readOGR("/users/laurini/Dropbox/cursoespacial/BASESCEM/DisRM07.shp", layer="DisRM07") #will load the shapefile to your dataset.
+plot(distritos,col=2)
+####################Para colocar o 'w' que será usado na parte da distância à escola##########
+lines(distritos[distritos$MUN_NOME=="SAO PAULO",],col=4)
+
+plot(distritos[distritos$MUN_NOME=="SAO PAULO",])
+points(coordinates(shape),col=4)
+
+distritossp=distritos[distritos$MUN_NOME=="SAO PAULO",]
+nc.bordersp <- unionSpatialPolygons(distritossp, rep(1, nrow(distritossp)))
+bsp=nc.bordersp 
+plot(bsp)
+cbsp= (bsp@polygons[[1]]@Polygons[[1]]@coords)
+plot(cbsp)
+
+
+wl=length(cbsp[,1])
+w <- owin(poly=list(x=cbsp[wl:1,1],y=cbsp[wl:1,2]))
+
+data=cbind(coordinates(shape),(shape$TIPO_EMP),shape$ANO_LAN,shape$DORM_UNID,shape$AR_TT_UNID)
+
+X <- ppp(data[,1],data[,2], window=w)
+X <- ppp(data[,1],data[,2], window=w,marks=as.factor(shapef$DORM_UNID))
+plot(density(X))
+ppm(X~1)
+
+str_name2<-'/users/laurini/Dropbox/cursoespacial/BASESCEM/F16_20100111-20101209_rad_v4.geotiff/F16_20100111-20101209_rad_v4.avg_vis.tif' 
+l2010calib=raster(str_name2)
+bb= c( -47.05275, -46.02732, -23.77716, -23.31552)
+rl2010calib <- crop(l2010calib, bb)
+plot(rl2010calib)
+lines(distritossp)
+
+shaper=readOGR("c:/users/laurini/Dropbox/cursoespacial/BASESCEM/LOG2016_CEM_RMSP.shp", layer="LOG2016_CEM_RMSP") #will load the shapefile to your dataset.
+shaperv=shaper[shaper$TIPOLOG=="RV",]
+
+
+
+
+plot(rl2010calib)
+lines(shaperv)
+
+plot(rl2010calib)
+lines(shaper)
+
+
+shapec2000=readOGR("C:/users/laurini/Dropbox/cursoespacial/BASESCEM/SC_2000/2000/Arquivo Geográfico/Shape/SCens00CEM.shp", layer="SCens00CEM") #will load the shapefile to your dataset.
+crs(shapec2000)=crs('+proj=longlat +ellps=GRS80 +no_defs')
+shapect=spTransform(shapec, crs("+proj=utm +zone=22s +south +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +unit=m +no_defs"))
+
+#usando gamma
+ext=extent(shape)
+dsp <- fortify(distritossp)
+
+map <- get_map(location =c(-46.80548,-24.34687 ,-46.37739,-22.90632),maptype = 'satellite')
+maph <- get_map(location =c(-46.80548,-24.34687 ,-46.37739,-22.90632),maptype = 'roadmap')
+
+
+
+d <- data.frame(lat=coordinates(shape)[,2],
+                lon=coordinates(shape)[,1])
+
+				
+figlan=ggmap(maph,  ylab = "Latitude", xlab = "Longitude") + 
+geom_polygon(aes(x=long, y=lat, group=group), fill='grey', size=.2,color='blue', data=dsp, alpha=0)+geom_point(data=d, aes(x=lon, y=lat),size=.05)
+ggsave("C:/Users/laurini/Dropbox/vitormestrado/figurasnovas/lanmapa.eps", width = 20, height = 20, units = "cm",dpi = 600)
+ggsave("C:/Users/laurini/Dropbox/vitormestrado/figurasnovas/lanmapa.jpg", width = 20, height = 20, units = "cm",dpi = 600)
+
+figlan=ggmap(map,  ylab = "Latitude", xlab = "Longitude") + 
+geom_polygon(aes(x=long, y=lat, group=group), fill='grey', size=.2,color='blue', data=dsp, alpha=0)+geom_point(data=d, aes(x=lon, y=lat),size=.05)
+ggsave("C:/Users/laurini/Dropbox/vitormestrado/figurasnovas/lansat.eps", width = 20, height = 20, units = "cm",dpi = 600)
+ggsave("C:/Users/laurini/Dropbox/vitormestrado/figurasnovas/lansat.jpg", width = 20, height = 20, units = "cm",dpi = 600)
+
+#luminosidade
+
+str_name1993<-'C:/dados/dmspnghtime/F101993.v4/F101993.v4b_web.stable_lights.avg_vis.tif/F101993.v4b_web.stable_lights.avg_vis.tif'
+str_name2013<-'C:/dados/dmspnghtime/F182013.v4/F182013.v4c_web.stable_lights.avg_vis.tif/F182013.v4c_web.stable_lights.avg_vis.tif' 
+l1993=raster(str_name1993)
+l2013=raster(str_name2013)
+bb= c( -46.82597, -46.36484, -24.00786 , -23.35623 )
+rl1993<- crop(l1993, bb)
+rl2013<- crop(l2013, bb)
+
+postscript("C:/Users/laurini/Dropbox/vitormestrado/figurasnovas/luminosidade1993.eps")
+ plot(rl1993)
+ lines(distritossp)
+dev.off() 
+
+postscript("C:/Users/laurini/Dropbox/vitormestrado/figurasnovas/luminosidade2013.eps")
+ plot(rl2013)
+ lines(distritossp)
+dev.off() 
+
+jpeg("C:/Users/laurini/Dropbox/vitormestrado/figurasnovas/luminosidade1993.jpg")
+ plot(rl1993)
+ lines(distritossp)
+dev.off() 
+
+jpeg("C:/Users/laurini/Dropbox/vitormestrado/figurasnovas/luminosidade2013.jpg")
+ plot(rl2013)
+ lines(distritossp)
+dev.off()
+
+
+
+shapeemp=readOGR("/users/laurini/Dropbox/cursoespacial/BASESCEM/CCE00_SP.shp", layer="CCE00_SP") 
+shapeempf=shapeemp[is.na(shapeemp$CNAE_E)==F,]
+
+distritos=readOGR("/users/laurini/Dropbox/cursoespacial/BASESCEM/DisRM07.shp", layer="DisRM07") #will load the shapefile to your dataset.
+lines(distritos[distritos$MUN_NOME=="SAO PAULO",])
+distritossp=distritos[distritos$MUN_NOME=="SAO PAULO",]
+require(maptools)
+nc.bordersp <- unionSpatialPolygons(distritossp, rep(1, nrow(distritossp)))
+bsp=nc.bordersp 
+#plot(bsp) 
+cbsp= (bsp@polygons[[1]]@Polygons[[1]]@coords)
+#plot(cbsp) 
+#defino a janela
+wl=length(cbsp[,1])
+w <- owin(poly=list(x=cbsp[wl:1,1],y=cbsp[wl:1,2]))
+
+substrRight <- function(x, n){
+  substr(x, nchar(x)-n+1, nchar(x))
+}
+
+shapea=shapef2=shapeempf[substr(shapeempf$CNAE_E,1,2)==80,]
+
+anos=unique(year)
+anof=as.double(substrRight(shapea$DATAFUN,4))
+shapea$anof=anof
+cd=coordinates(shapea)
+X0 <- ppp(cd[,1],cd[,2], window=w,marks=rep(1,length(cd[,1])))
+sigm=bw.diggle(X0)
+
+postscript("C:/Users/laurini/Dropbox/vitormestrado/figurasnovas/densidadeeducacao.eps")
+plot(denemp1,main="Densidade Educação")
+dev.off()
+
+jpeg("C:/Users/laurini/Dropbox/vitormestrado/figurasnovas/densidadeeducacao.jpg")
+plot(denemp1,main="Densidade Educação")
+dev.off()
+
+shapefavela=readOGR("c:/users/laurini/Dropbox/cursoespacial/BASESCEM/Favelas_2008/HABI_Favelas_2008.shp", layer="HABI_Favelas_2008") #will load the shapefile to your dataset.
+
+plot(shapefavela)
+crs(shapefavela)=crs("+proj=utm +zone=23 +south +ellps=aust_SA +units=m +no_defs")
+shapefavelat<-spTransform(shapefavela, crs("+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"))
+shapefavelat
+xyfav=coordinates(shapefavelat[shapefavelat$AREA>.005,])
+
+
+d <- data.frame(lat=xyfav[,2],
+                lon=xyfav[,1])
+
+				
+figfav=ggmap(maph,  ylab = "Latitude", xlab = "Longitude") + 
+geom_polygon(aes(x=long, y=lat, group=group), fill='grey', size=.2,color='blue', data=dsp, alpha=0)+geom_point(data=d, aes(x=lon, y=lat),size=.05)
+ggsave("C:/Users/laurini/Dropbox/vitormestrado/figurasnovas/favelamapa.eps", width = 20, height = 20, units = "cm",dpi = 600)
+ggsave("C:/Users/laurini/Dropbox/vitormestrado/figurasnovas/favelamapa.jpg", width = 20, height = 20, units = "cm",dpi = 600)
+
+
+figfavs=ggmap(map,  ylab = "Latitude", xlab = "Longitude") + 
+geom_polygon(aes(x=long, y=lat, group=group), fill='grey', size=.2,color='blue', data=dsp, alpha=0)+geom_point(data=d, aes(x=lon, y=lat),size=.3)
+ggsave("C:/Users/laurini/Dropbox/vitormestrado/figurasnovas/favelasat.eps", width = 20, height = 20, units = "cm",dpi = 600)
+ggsave("C:/Users/laurini/Dropbox/vitormestrado/figurasnovas/favelasat.jpg", width = 20, height = 20, units = "cm",dpi = 600)
+
+
+
+
+shapeescolasb=readOGR("c:/users/laurini/Dropbox/cursoespacial/BASESCEM/Escolas Públicas/CEM_ESCPUB01.shp", layer="CEM_ESCPUB01") #will load the shapefile to your dataset.
+crs(shapeescolasb)=crs("+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")
+plot(shapeescolasb)
+matescolas=cbind(as.double(as.matrix(shapeescolasb$LONGITUDE))/1000000,as.double(as.matrix(shapeescolasb$LATITUDE))/1000000)
+
+
+d <- data.frame(lat=matescolas[,2],
+                lon=matescolas[,1])
+
+				
+figfav=ggmap(maph,  ylab = "Latitude", xlab = "Longitude") + 
+geom_polygon(aes(x=long, y=lat, group=group), fill='grey', size=.2,color='blue', data=dsp, alpha=0)+geom_point(data=d, aes(x=lon, y=lat),size=.3)
+ggsave("C:/Users/laurini/Dropbox/vitormestrado/figurasnovas/escolasmapa.eps", width = 20, height = 20, units = "cm",dpi = 600)
+ggsave("C:/Users/laurini/Dropbox/vitormestrado/figurasnovas/escolasmapa.jpg", width = 20, height = 20, units = "cm",dpi = 600)
+
+
+figfavs=ggmap(map,  ylab = "Latitude", xlab = "Longitude") + 
+geom_polygon(aes(x=long, y=lat, group=group), fill='grey', size=.2,color='blue', data=dsp, alpha=0)+geom_point(data=d, aes(x=lon, y=lat),size=.3)
+ggsave("C:/Users/laurini/Dropbox/vitormestrado/figurasnovas/escolassat.eps", width = 20, height = 20, units = "cm",dpi = 600)
+ggsave("C:/Users/laurini/Dropbox/vitormestrado/figurasnovas/escolassat.jpg", width = 20, height = 20, units = "cm",dpi = 600)
+
+
+shapeubs=readOGR("c:/users/laurini/Dropbox/cursoespacial/BASESCEM/CEM_(dados DATASUS)_2001_e_2007/UBS_2007.shp", layer="UBS_2007") #will load the shapefile to your dataset.
+plot(shapeubs)
+matubs=cbind(as.double(as.matrix(shapeubs$LONGITUDE))/1000000,as.double(as.matrix(shapeubs$LATITUDE))/1000000)
+d <- data.frame(lat=matubs[,2],
+                lon=matubs[,1])
+
+figfav=ggmap(maph,  ylab = "Latitude", xlab = "Longitude") + 
+geom_polygon(aes(x=long, y=lat, group=group), fill='grey', size=.2,color='blue', data=dsp, alpha=0)+geom_point(data=d, aes(x=lon, y=lat),size=.3)
+ggsave("C:/Users/laurini/Dropbox/vitormestrado/figurasnovas/ubsmapa.eps", width = 20, height = 20, units = "cm",dpi = 600)
+ggsave("C:/Users/laurini/Dropbox/vitormestrado/figurasnovas/ubsmapa.jpg", width = 20, height = 20, units = "cm",dpi = 600)
+
+
+figfavs=ggmap(map,  ylab = "Latitude", xlab = "Longitude") + 
+geom_polygon(aes(x=long, y=lat, group=group), fill='grey', size=.2,color='blue', data=dsp, alpha=0)+geom_point(data=d, aes(x=lon, y=lat),size=.3)
+ggsave("C:/Users/laurini/Dropbox/vitormestrado/figurasnovas/ubssat.eps", width = 20, height = 20, units = "cm",dpi = 600)
+ggsave("C:/Users/laurini/Dropbox/vitormestrado/figurasnovas/ubssat.jpg", width = 20, height = 20, units = "cm",dpi = 600)
+
+
+
