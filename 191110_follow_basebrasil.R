@@ -1,27 +1,43 @@
 #191110_follow_basebrasil
 
 #preliminaries -------------------------------------------------------------
-library(spdep)
 library(sp)  # classes for spatial data
-library(raster)  # grids, rasters
-library(rasterVis)  # raster visualisation
-library(maptools)
-library(rgeos)
-library(dismo)
 library(rgdal)
-library(INLA)
-library(xts)
-library(spatstat)
-library(ggplot2)
 library(tidyverse)
+library(ggplot2)
+
+library(spdep)
+#install.packages("spdep")
+# sudo apt-get install libudunits2-dev
+library(raster)  # grids, rasters
+#install.packages("raster")
+library(rasterVis)  # raster visualisation
+#install.packages('rasterVis')
+library(rgeos)
+#install.packages('rgeos')
+library(maptools)
+#install.packages('maptools')
+library(dismo)
+install.packages('dismo')
+library(INLA)
+#install.packages("INLA", repos=c(getOption("repos"), 
+#  INLA="https://inla.r-inla-download.org/R/stable"), dep=TRUE)
+library(xts)
+#install.packages('xts')
+library(spatstat)
+#install.packages('spatstat')
 library(ggmap)
+#install.packages('ggmap')
 
 
-path1 = "C:/Users/willi/Dropbox/working/RAW_DATA/BASESCEM"
+
+#path1 = "C:/Users/willi/Dropbox/working/RAW_DATA/BASESCEM"
+path1 = "~/Dropbox/working/RAW_DATA/BASESCEM"
 #New Residences Metropolitan Region -------------------------------------------------
-#lançamento de imoveis na região metropolitana
-shape=readOGR( paste(path1,"/LANRES_85_13_RMSP_CEM.shp",sep=""), 
-               layer="LANRES_85_13_RMSP_CEM") 
+#lan?amento de imoveis na regi?o metropolitana
+shape=readOGR( paste(path1,"/LanRes_85_13_RMSP_CEM.shp",sep=""), 
+               layer="LanRes_85_13_RMSP_CEM")
+shape@data %>% View()
 shape=shape[shape$MUNICIPIO=='SAO PAULO',]
 #plot(shape)
 
@@ -30,7 +46,7 @@ distritos=readOGR(paste(path1,"/DisRM07.shp",sep=""),
                   layer="DisRM07")
 #plot(distritos,col=2)
 #distritos@data %>% View()
-#Para colocar o 'w' que será usado na parte da distância à escola
+#Para colocar o 'w' que ser? usado na parte da dist?ncia ? escola
 distritossp=distritos[distritos$MUN_NOME=="SAO PAULO",]
 #unionSpatialPolygons take only the outer union of borders
 nc.bordersp <- unionSpatialPolygons(distritossp, rep(1, nrow(distritossp)))
@@ -141,7 +157,7 @@ plot(rl2010calib)
 lines(shaper)
 
 # Censo2000------------------------------------------------------------------
-shapec2000=readOGR(paste(path1,"/SC_2000/2000/Arquivo Geográfico/Shape/SCens00CEM.shp",sep=""), 
+shapec2000=readOGR(paste(path1,"/SC_2000/2000/Arquivo Geogr?fico/Shape/SCens00CEM.shp",sep=""), 
                    layer="SCens00CEM")
 crs(shapec2000)=crs('+proj=longlat +ellps=GRS80 +no_defs')
 shapect=spTransform(shapec2000, crs("+proj=utm +zone=22s +south +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +unit=m +no_defs"))
@@ -225,23 +241,23 @@ plot(bsp) #see map of outer border
 cbsp= (bsp@polygons[[1]]@Polygons[[1]]@coords) #take coordinates of outerborder
 plot(cbsp)  #see coordinates of outerborder
 wl=length(cbsp[,1]) #define window
-w <- owin(poly=list(x=cbsp[wl:1,1],y=cbsp[wl:1,2]))#define window which is São Paulo's border
+w <- owin(poly=list(x=cbsp[wl:1,1],y=cbsp[wl:1,2]))#define window which is S?o Paulo's border
 plot(w) #see window, sp's border
 
 
 table(shapeempf$CNAE_E)
 shapea=shapef2=shapeempf[substr(shapeempf$CNAE_E,1,2)==80,]
 #firms selected are schools
-#80 EDUCAÇAO for CNAE-fiscal 1.0
+#80 EDUCA?AO for CNAE-fiscal 1.0
 #https://concla.ibge.gov.br/busca-online-cnae.html?view=secao&tipo=cnae&versaosubclasse=2&versaoclasse=1&secao=M
 #Notas Explicativas: ##
-#Esta seçao reúne unidades que realizam atividades de ensino, público e privado, 
-#em qualquer nível e para qualquer profissao, na forma presencial ou através de rádio 
-#e televisao ou outro meio de comunicaçao. Inclui o sistema educacional nos seus vários 
-#graus e o ensino de formaçao contínua (exemplos: cursos de idiomas, cursos de 
+#Esta se?ao re?ne unidades que realizam atividades de ensino, p?blico e privado, 
+#em qualquer n?vel e para qualquer profissao, na forma presencial ou atrav?s de r?dio 
+#e televisao ou outro meio de comunica?ao. Inclui o sistema educacional nos seus v?rios 
+#graus e o ensino de forma?ao cont?nua (exemplos: cursos de idiomas, cursos de 
 #aprendizagem e treinamento gerencial e profissional). Nao inclui o ensino de esportes 
-#(atividades desportivas). Quando uma instituiçao atua em mais de um nível da educaçao 
-#seriada, é classificada na classe CNAE correspondente ao nível mais elevado
+#(atividades desportivas). Quando uma institui?ao atua em mais de um n?vel da educa?ao 
+#seriada, ? classificada na classe CNAE correspondente ao n?vel mais elevado
 ##
 shapea@data %>% View() #see the names of schools
 anos=unique(year) #which years we have?
@@ -263,7 +279,7 @@ sigm=bw.diggle(educ_ppp)
 plot(sigm, xlim=c(0,0.0015))
 denemp1 = density(educ_ppp, sigm)
 jpeg("densidadeeducacao.jpg")
-plot(denemp1,main="Densidade Educação")
+plot(denemp1,main="Densidade Educa??o")
 dev.off()
 
 
@@ -305,7 +321,7 @@ ggsave("favelasat.jpg", width = 20, height = 20, units = "cm",dpi = 600)
 #CEM_ESCPUB01.shp
 #in the directory of curso espacial
 #for the following code
-shapeescolasb=readOGR("c:/users/laurini/Dropbox/cursoespacial/BASESCEM/Escolas Públicas/CEM_ESCPUB01.shp", layer="CEM_ESCPUB01") #will load the 
+shapeescolasb=readOGR("c:/users/laurini/Dropbox/cursoespacial/BASESCEM/Escolas P?blicas/CEM_ESCPUB01.shp", layer="CEM_ESCPUB01") #will load the 
 
 #I couldn't find the file:
 #UBS_2007.shp

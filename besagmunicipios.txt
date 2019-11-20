@@ -1,0 +1,88 @@
+library(spdep)
+library(sp)  # classes for spatial data
+library(raster)  # grids, rasters
+library(rasterVis)  # raster visualisation
+library(maptools)
+library(rgeos)
+library(dismo)
+library(rgdal)
+library(INLA)
+library(maps)
+library(ncf)
+
+
+nc.sids <- readOGR("/users/laurini/dropbox/cursoespacial/SHPBRASIL/municip07.shp", layer="municip07") 
+cdn=coordinates(nc.sids)
+
+dataf=read.table(file="/users/laurini/dropbox/cursoespacial/SHPBRASIL/mundata.txt",header=T)
+gr=dataf[,1]
+ri=dataf[,2]
+
+
+
+
+id1=1:(length(gr))
+nc.sids$ID<-id1
+nc.sids$gr<-gr
+nc.sids$ri<-ri
+
+nc.sids=nc.sids[substr(nc.sids$CODIGOIB1,1,2)=='35',]
+nc.sids$ID<-1:645
+nc.nb <- poly2nb(nc.sids)
+plot(nc.nb, coordinates(nc.sids))
+nb2INLA("nc.adj", nc.nb)
+
+
+m1<-inla(nc.sids$gr~nc.sids$ri+f(nc.sids$ID, model="besag", graph="nc.adj"),
+   family="gaussian", data=as.data.frame(nc.sids),
+   control.predictor=list(compute=TRUE))
+
+m1<-inla(nc.sids$gr~nc.sids$ri+f(nc.sids$ID, model="besagproper", graph="nc.adj"),
+   family="gaussian", data=as.data.frame(nc.sids),
+   control.predictor=list(compute=TRUE))
+
+summary(m1)
+
+m1$summary.fitted.values[1:645,1]
+nc.sids$fitbesag<-m1$summary.fitted.values[1:645,1]
+nc.sids$rebesag<-m1$summary.random[[1]][1:645,2]
+
+library("RColorBrewer")
+print(spplot(nc.sids, c("gr", "fitbesag"), cuts = 8, col.regions = brewer.pal(9, 
+  "Blues"), names.attr = c("Observed gr", "Predicted gr besag proper")))
+
+spplot(nc.sids, "rebesag")
+  
+print(spplot(nc.sids, c("rebesag"), cuts = 8, col.regions = brewer.pal(9, 
+  "Blues"), names.attr = c("spatial random effects")))
+
+m0<-inla(gr~ri,family="gaussian", data=as.data.frame(nc.sids),
+   control.predictor=list(compute=TRUE))
+
+nc.sids$fitlm<-m0$summary.fitted.values[1:645,1]
+
+print(spplot(nc.sids, c("gr", "fitbesag","fitlm"), cuts = 8, col.regions = brewer.pal(9, 
+  "Blues"), names.attr = c("Observed gr", "Predicted gr besag proper","Predicted lm")))
+  
+m2<-inla(nc.sids$gr~nc.sids$ri+f(nc.sids$ID, model="bym", graph="nc.adj"),
+   family="gaussian", data=as.data.frame(nc.sids),
+   control.predictor=list(compute=TRUE))
+
+m2$summary.fitted.values[1:645,1]
+nc.sids$fitbym<-m2$summary.fitted.values[1:645,1]
+nc.sids$rebym<-m2$summary.random[[1]][1:645,2]
+
+print(spplot(nc.sids, c("gr", "fitbesag","fitbym","fitlm"), cuts = 8, col.regions = brewer.pal(9, 
+  "Blues"), names.attr = c("Observed gr", "Predicted gr besag proper","Predicted gr bym","Predicted lm")))
+
+print(spplot(nc.sids, c("rebesag","rebym"), cuts = 8, col.regions = brewer.pal(9, 
+  "Blues"), names.attr = c("re besag proper","re bym")))
+
+
+nc.sids$ucbym<-m2$summary.random[[1]][1:645,6]
+nc.sids$lcbym<-m2$summary.random[[1]][1:645,4]
+
+
+print(spplot(nc.sids, c("lcbym","ucbym"), cuts = 8, col.regions = brewer.pal(9, 
+  "Blues"), names.attr = c("Lower CI bym","Upper CI bym")))
+  
